@@ -60,6 +60,7 @@ sub new {
     h => [],
     v => [],
     orient => 0,
+    transforms => [],
   };
   bless $self, $class;
 
@@ -71,6 +72,16 @@ sub new {
     }
    }
 
+  #
+  # Note: I probably don't need to transform the entire grid (just the
+  # first and last rows/columns, but that is the way I first tried it
+  # first.
+  #
+  for my $t (0 .. 7) {
+    push @{ $self->{ transform } }, [ $self->{ h }[0], $self->{ v }[-1], $self->{ h }[-1 ], $self->{ v }[0] ];
+    $self->transform();
+   }
+
   return $self;
  }
 }
@@ -79,9 +90,28 @@ my $input_file = $ARGV[0] || 'input20.txt';
 
 my $input = Path::Tiny::path( $input_file )->slurp_utf8();
 
-my $cards;
+my @cards;
 while ($input =~ /^Tile (\d+):\n(.*?)(?:^\n|\Z)/msg) {
-  push @{ $cards }, Card->new( $1, $2 );
+  push @cards, Card->new( $1, $2 );
  }
+
+for my $i (0 .. @cards - 2) {
+  for my $j ($i + 1 .. @cards - 1) {
+    if ($cards[$i]->compare( $cards[$j] )) {
+      push @{ $cards[$i]->{ edges } }, $cards[$j]->{ id };
+      push @{ $cards[$j]->{ edges } }, $cards[$i]->{ id };
+     }
+   }
+ }
+
+my $corners = 1;
+my $origin = -1;
+for my $i (0 .. @cards - 1) {
+  if (@{ $cards[$i]->{ edges } } == 2) {
+    $corners *= $cards[$i]->{ id };
+    $origin = $i unless ($origin >= 0);
+   }
+ }
+print "The product of the corner tiles is $corners\n";
 
 exit;
